@@ -2,10 +2,10 @@ class Population {
     rockets: Rocket[];
     popsize: number;
     lifespan: number;
-    target: p5.Vector;
+    target: ITarget;
     matingPool: Rocket[];
 
-    constructor(target: p5.Vector, lifespan: number) {
+    constructor(target: ITarget, lifespan: number) {
         this.rockets = [];
         this.matingPool = [];
         this.popsize = 100;

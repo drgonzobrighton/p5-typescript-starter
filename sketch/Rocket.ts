@@ -1,20 +1,28 @@
 class Rocket {
+
     pos: p5.Vector;
     vel: p5.Vector;
     acc: p5.Vector;
     dna: DNA;
     count: number;
+    fitness: number;
+    lifespan: number;
+    target: p5.Vector;
+    completed: boolean;
 
-    constructor(lifespan : number) {
+    constructor(lifespan: number, target: p5.Vector, dna?: DNA) {
 
         this.pos = createVector(width / 2, height);
         this.vel = createVector();
         this.acc = createVector();
 
-        this.dna = new DNA(lifespan);
+        this.lifespan = lifespan;
+        this.dna = dna ?? new DNA(lifespan);
         this.count = 0;
+        this.fitness = 0;
 
-        console.log(this.dna)
+        this.target = target;
+        this.completed = false;
     }
 
     applyForce(force: p5.Vector) {
@@ -22,11 +30,20 @@ class Rocket {
     }
 
     update() {
+        const distance = dist(this.pos.x, this.pos.y, this.target.x, this.target.y);
+
+        if (distance < 10) {
+            this.completed = true;
+            this.pos = this.target.copy()
+        }
+
         this.applyForce(this.dna.genes[this.count++]);
 
-        this.vel.add(this.acc);
-        this.pos.add(this.vel);
-        this.acc.mult(0);
+        if (!this.completed) {
+            this.vel.add(this.acc);
+            this.pos.add(this.vel);
+            this.acc.mult(0);
+        }
     }
 
     show() {
@@ -35,8 +52,16 @@ class Rocket {
         rotate(this.vel.heading());
         rectMode(CENTER);
         noStroke();
-        fill(255,200)
+        fill(255, 200)
         rect(0, 0, 50, 10);
         pop();
+    }
+
+    calculateFitness() {
+        const distance = dist(this.pos.x, this.pos.y, this.target.x, this.target.y);
+        this.fitness = map(distance, 0, width, width, 0);
+
+        if (this.completed)
+            this.fitness *= 10;
     }
 }

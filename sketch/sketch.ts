@@ -1,11 +1,16 @@
 // GLOBAL VARS & TYPES
-let rocket: Rocket;
+let population: Population;
+let lifespan = 200;
+
+let lifeUI : p5.Element;
 
 // P5 WILL AUTOMATICALLY USE GLOBAL MODE IF A DRAW() FUNCTION IS DEFINED
 function setup() {
-  createCanvas(800, 600);
+  createCanvas(windowWidth, windowHeight - 100);
 
-  rocket = new Rocket();
+  population = new Population(lifespan);
+
+  lifeUI = createP(lifespan.toString());
 }
 
 // p5 WILL AUTO RUN THIS FUNCTION IF THE BROWSER WINDOW SIZE CHANGES
@@ -16,6 +21,8 @@ function windowResized() {
 // p5 WILL HANDLE REQUESTING ANIMATION FRAMES FROM THE BROWSER AND WIL RUN DRAW() EACH ANIMATION FROME
 function draw() {
   background(0);
-  rocket.update();
-  rocket.show();
+  population.run();
+
+  lifeUI.html(lifespan.toString());
+  lifespan++;
 }

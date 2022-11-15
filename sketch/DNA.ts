@@ -7,7 +7,7 @@ class DNA {
 
         if (!genes) {
             for (let i = 0; i < lifespan; i++) {
-                const gene = p5.Vector.random2D();
+                const gene =  p5.Vector.random2D();
                 gene.setMag(this.magnitude);
                 this.genes.push(gene);
             }

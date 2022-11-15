@@ -7,10 +7,14 @@ class Rocket {
     count: number;
     fitness: number;
     lifespan: number;
-    target: p5.Vector;
+    target: ITarget;
+    obstacle: ITarget;
     completed: boolean;
+    crashed: boolean;
+    r: number;
+    colour: p5.Color;
 
-    constructor(lifespan: number, target: p5.Vector, dna?: DNA) {
+    constructor(lifespan: number, target: ITarget, obstacle: ITarget, dna?: DNA) {
 
         this.pos = createVector(width / 2, height);
         this.vel = createVector();
@@ -22,7 +26,11 @@ class Rocket {
         this.fitness = 0;
 
         this.target = target;
+        this.obstacle = obstacle;
         this.completed = false;
+        this.crashed = false;
+        this.r = 3.0
+        this.colour = color(127);
     }
 
     applyForce(force: p5.Vector) {
@@ -30,11 +38,18 @@ class Rocket {
     }
 
     update() {
-        const distance = dist(this.pos.x, this.pos.y, this.target.x, this.target.y);
+        if (this.obstacle.intersectsWith(this.pos)) {
+            this.crashed = true;
+            this.colour = color(255,0,0);
+            return;
+        }
+
+        const distance = dist(this.pos.x, this.pos.y, this.target.center.x, this.target.center.y);
 
         if (distance < 10) {
             this.completed = true;
-            this.pos = this.target.copy()
+            this.pos = createVector(this.target.center.x, this.target.center.y);
+            this.colour = color(0,255,0);
         }
 
         this.applyForce(this.dna.genes[this.count++]);
@@ -47,21 +62,38 @@ class Rocket {
     }
 
     show() {
+        
+        let theta = this.vel.heading() + radians(90);
+        fill(this.colour);
+        stroke(200);
         push();
         translate(this.pos.x, this.pos.y);
-        rotate(this.vel.heading());
-        rectMode(CENTER);
-        noStroke();
-        fill(255, 200)
-        rect(0, 0, 50, 10);
+        rotate(theta);
+
+       // ellipse(0, -this.r * 2, 5, 5)
+
+        beginShape();
+        vertex(0, -this.r * 2);
+        vertex(-this.r, this.r * 2);
+        vertex(this.r, this.r * 2);
+        endShape(CLOSE);
         pop();
+
     }
 
     calculateFitness() {
         const distance = dist(this.pos.x, this.pos.y, this.target.x, this.target.y);
-        this.fitness = map(distance, 0, width, width, 0);
+        //this.fitness = map(distance, 0, width, width, 0);
+        this.fitness = (1 / distance);
+
 
         if (this.completed)
-            this.fitness *= 10;
+            this.fitness *= 20;
+
+        if (this.crashed)
+            this.fitness /= 10;
+
+            console.log(this.fitness)
+
     }
 }

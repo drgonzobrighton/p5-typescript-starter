@@ -4,16 +4,18 @@ class Population {
     lifespan: number;
     target: ITarget;
     matingPool: Rocket[];
+    obstacle: ITarget;
 
-    constructor(target: ITarget, lifespan: number) {
+    constructor(target: ITarget, obstacle: ITarget, lifespan: number) {
         this.rockets = [];
         this.matingPool = [];
         this.popsize = 100;
         this.lifespan = lifespan;
         this.target = target;
+        this.obstacle = obstacle;
 
         for (let i = 0; i < this.popsize; i++) {
-            this.rockets.push(new Rocket(this.lifespan, this.target));
+            this.rockets.push(new Rocket(this.lifespan, this.target, this.obstacle));
         }
     }
 
@@ -39,7 +41,7 @@ class Population {
             const childDNA = parentA.crossover(parentB);
             childDNA.mutate();
 
-            newRockets.push(new Rocket(this.lifespan, this.target, childDNA));
+            newRockets.push(new Rocket(this.lifespan, this.target, this.obstacle, childDNA));
         }
 
         this.rockets = newRockets;
@@ -64,5 +66,12 @@ class Population {
                 maxFitness = rocket.fitness;
         });
         return maxFitness;
+    }
+
+    getCompletedRocketCount(){
+        return this.rockets.filter(r => r.completed === true).length;
+    }
+    getCrashedRocketCount(){
+        return this.rockets.filter(r => r.crashed === true).length;
     }
 }

@@ -30,14 +30,15 @@ var DNA = (function () {
     return DNA;
 }());
 var Population = (function () {
-    function Population(target, lifespan) {
+    function Population(target, obstacle, lifespan) {
         this.rockets = [];
         this.matingPool = [];
         this.popsize = 100;
         this.lifespan = lifespan;
         this.target = target;
+        this.obstacle = obstacle;
         for (var i = 0; i < this.popsize; i++) {
-            this.rockets.push(new Rocket(this.lifespan, this.target));
+            this.rockets.push(new Rocket(this.lifespan, this.target, this.obstacle));
         }
     }
     Population.prototype.run = function () {
@@ -58,7 +59,7 @@ var Population = (function () {
             var parentB = random(this.matingPool).dna;
             var childDNA = parentA.crossover(parentB);
             childDNA.mutate();
-            newRockets.push(new Rocket(this.lifespan, this.target, childDNA));
+            newRockets.push(new Rocket(this.lifespan, this.target, this.obstacle, childDNA));
         }
         this.rockets = newRockets;
     };
@@ -81,10 +82,16 @@ var Population = (function () {
         });
         return maxFitness;
     };
+    Population.prototype.getCompletedRocketCount = function () {
+        return this.rockets.filter(function (r) { return r.completed === true; }).length;
+    };
+    Population.prototype.getCrashedRocketCount = function () {
+        return this.rockets.filter(function (r) { return r.crashed === true; }).length;
+    };
     return Population;
 }());
 var Rocket = (function () {
-    function Rocket(lifespan, target, dna) {
+    function Rocket(lifespan, target, obstacle, dna) {
         this.pos = createVector(width / 2, height);
         this.vel = createVector();
         this.acc = createVector();
@@ -93,16 +100,26 @@ var Rocket = (function () {
         this.count = 0;
         this.fitness = 0;
         this.target = target;
+        this.obstacle = obstacle;
         this.completed = false;
+        this.crashed = false;
+        this.r = 3.0;
+        this.colour = color(127);
     }
     Rocket.prototype.applyForce = function (force) {
         this.acc.add(force);
     };
     Rocket.prototype.update = function () {
-        var distance = dist(this.pos.x, this.pos.y, this.target.x, this.target.y);
+        if (this.obstacle.intersectsWith(this.pos)) {
+            this.crashed = true;
+            this.colour = color(255, 0, 0);
+            return;
+        }
+        var distance = dist(this.pos.x, this.pos.y, this.target.center.x, this.target.center.y);
         if (distance < 10) {
             this.completed = true;
-            this.pos = this.target.copy();
+            this.pos = createVector(this.target.center.x, this.target.center.y);
+            this.colour = color(0, 255, 0);
         }
         this.applyForce(this.dna.genes[this.count++]);
         if (!this.completed) {
@@ -112,50 +129,89 @@ var Rocket = (function () {
         }
     };
     Rocket.prototype.show = function () {
+        var theta = this.vel.heading() + radians(90);
+        fill(this.colour);
+        stroke(200);
         push();
         translate(this.pos.x, this.pos.y);
-        rotate(this.vel.heading());
-        rectMode(CENTER);
-        noStroke();
-        fill(255, 200);
-        rect(0, 0, 50, 10);
+        rotate(theta);
+        beginShape();
+        vertex(0, -this.r * 2);
+        vertex(-this.r, this.r * 2);
+        vertex(this.r, this.r * 2);
+        endShape(CLOSE);
         pop();
     };
     Rocket.prototype.calculateFitness = function () {
         var distance = dist(this.pos.x, this.pos.y, this.target.x, this.target.y);
-        this.fitness = map(distance, 0, width, width, 0);
+        this.fitness = (1 / distance);
         if (this.completed)
-            this.fitness *= 10;
+            this.fitness *= 20;
+        if (this.crashed)
+            this.fitness /= 10;
+        console.log(this.fitness);
     };
     return Rocket;
 }());
+var Rectangle = (function () {
+    function Rectangle(x, y, w, h, colour) {
+        this.x = x;
+        this.y = y;
+        this.h = h;
+        this.w = w;
+        this.colour = colour !== null && colour !== void 0 ? colour : color(255, 200);
+        this.center = createVector(this.x + (this.w / 2), this.y + (this.h / 2));
+    }
+    Rectangle.prototype.draw = function () {
+        push();
+        translate(this.x, this.y);
+        noStroke();
+        fill(this.colour);
+        rect(0, 0, this.w, this.h);
+        pop();
+    };
+    Rectangle.prototype.intersectsWith = function (point) {
+        return (point.x > this.x && point.x < this.x + this.w && point.y > this.y && point.y < this.y + this.h);
+    };
+    return Rectangle;
+}());
 var population;
-var lifespan = 200;
+var lifespan = 300;
 var count = 0;
 var target;
+var obstacle;
+var generationCount = 1;
 var lifeUI;
+var completedRocketCountUI;
+var crashedRocketsCountUI;
+var generationCountUI;
 function setup() {
     createCanvas(1000, 800);
-    target = createVector(width / 2, 50);
-    population = new Population(target, lifespan);
-    lifeUI = createP(count.toString());
+    target = new Rectangle(width / 2, 50, 20, 20);
+    obstacle = new Rectangle(width / 2 - 200, height - 400, 600, 20, color(0, 255, 0));
+    population = new Population(target, obstacle, lifespan);
+    lifeUI = createP("life span: " + count.toString());
+    completedRocketCountUI = createP("rockets that reached target: " + population.getCompletedRocketCount());
+    crashedRocketsCountUI = createP("rockets that crashed: " + population.getCrashedRocketCount());
+    generationCountUI = createP("generation: " + generationCount);
 }
 function windowResized() {
-    resizeCanvas(windowWidth, windowHeight);
 }
 function draw() {
     background(0);
-    drawTarget();
+    target.draw();
+    obstacle.draw();
     population.run();
-    lifeUI.html(count.toString());
+    lifeUI.html("life span: " + count.toString());
+    completedRocketCountUI.html("rockets that reached target: " + population.getCompletedRocketCount().toString());
+    crashedRocketsCountUI.html("rockets that crashed: " + population.getCrashedRocketCount().toString());
     count++;
     if (count === lifespan) {
         count = 0;
         population.evaluate();
         population.selection();
+        generationCount++;
+        generationCountUI.html("generation: " + generationCount);
     }
-}
-function drawTarget() {
-    ellipse(target.x, target.y, 16, 16);
 }
 //# sourceMappingURL=build.js.map
